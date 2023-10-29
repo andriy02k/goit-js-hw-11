@@ -19,6 +19,11 @@ async function handlerSearch(e) {
     try {
         const gallery = await serviceGetGallery(inputValue);
         const images = gallery.hits;
+
+        if (!images || !images.length) {
+            throw new Error('No images found.');
+        }
+
         container.innerHTML = createMarkup(images);
             const lightbox = new SimpleLightbox('.gallery a', {
         /* Налаштування можна додати тут */
@@ -34,14 +39,14 @@ async function handlerSearch(e) {
 
 
 async function serviceGetGallery(query) {
-    const params = await{
+    const params = {
                 key: '40333980-523d7a346ab541add85c41861',
                 q: query,
                 image_type: 'photo',
                 orientation: 'horizontal',
                 safesearch: true,
     };
-    return axios.get('', { params })
+    return axios.get('https://pixabay.com/api', { params })
         .then(response => response.data);
 };
 
