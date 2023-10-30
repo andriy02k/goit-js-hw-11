@@ -4,15 +4,15 @@ import 'notiflix/dist/notiflix-3.2.6.min.css';
 import SimpleLightbox from "simplelightbox";
 import "simplelightbox/dist/simple-lightbox.min.css";
 
-axios.defaults.baseURL = 'https://pixabay.com/api';
+const BASE_URL = 'https://pixabay.com/api/';
+const API_KEY = '40333980-523d7a346ab541add85c41861';
 
 const form = document.querySelector(".search-form");
 const container = document.querySelector('.gallery');
 
-const lightbox = new SimpleLightbox('.gallery a');
-
 form.addEventListener("submit", handlerSearch);
-container.addEventListener('click', markupCardList);
+
+const lightbox = new SimpleLightbox('.gallery a');
 
 async function handlerSearch(e) {
     e.preventDefault();
@@ -21,10 +21,18 @@ async function handlerSearch(e) {
     const formData = new FormData(e.currentTarget);
     const inputValue = formData.get("searchQuery");
     if (!inputValue) {
-    return Notify.failure('Enter something!');
+    return Notiflix.Notify.failure('Enter something!');
   }
     try {
         const gallery = await serviceGetGallery(inputValue);
+
+        if (gallery.hits.length === 0) {
+            Notiflix.Report.failure(
+                'Error 404',
+                'Sorry, there are no images matching your search query. Please try again.'
+            );
+        }
+
         container.innerHTML = createMarkup(gallery.hits);
     } catch (err) {
         Notiflix.Notify.failure(
@@ -36,22 +44,16 @@ async function handlerSearch(e) {
     }
 };
 
-async function markupCardList(evt) {
-  evt.preventDefault();
-  lightbox.next();
-}
-
-
 async function serviceGetGallery(query) {
-    const params = {
-                key: '40333980-523d7a346ab541add85c41861',
+    const params = new URLSearchParams({
+                key: API_KEY,
                 q: query,
                 image_type: 'photo',
                 orientation: 'horizontal',
                 safesearch: true,
-    };
-    return axios.get('', { params })
-        .then(response => response.data);
+    });
+    const response = await axios.get(`${BASE_URL}?${params}`)
+        return response.data;
 };
 
 function createMarkup(arr) {
@@ -83,12 +85,10 @@ function createMarkup(arr) {
     .join("");
 };
 
+// async function markupCardList(evt) {
+//   evt.preventDefault();
+//   lightbox.next();
+// }
 
-// {webformatURL, largeImageURL, tags, likes, views, comments, downloads}
-
-        //     images.forEach(image => {
-        //         return { webformatURL, largeImageURL, tags, likes, views, comments, downloads } = image;
-        //     });
-        // console.log(webformatURL, largeImageURL, tags, likes, views, comments, downloads);
 
     
