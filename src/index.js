@@ -9,6 +9,16 @@ const API_KEY = '40333980-523d7a346ab541add85c41861';
 
 const form = document.querySelector(".search-form");
 const container = document.querySelector('.gallery');
+const guard = document.querySelector('.js-guard');
+
+const options = {
+  root: null,
+  rootMargin: "300px",
+};
+
+const observer = new IntersectionObserver(handlerLoadMore, options);
+
+let page = 1;
 
 form.addEventListener("submit", handlerSearch);
 
@@ -32,8 +42,10 @@ async function handlerSearch(e) {
                 'Sorry, there are no images matching your search query. Please try again.'
             );
         }
-
-        container.innerHTML = createMarkup(gallery.hits);
+        container.insertAdjacentHTML('beforeend', createMarkup(gallery.hits));
+        if (gallery.totalHits < gallery.total) {
+            observer.observe(guard);
+        }
     } catch (err) {
         Notiflix.Notify.failure(
             'Sorry, there are no images matching your search query. Please try again.');
@@ -44,13 +56,14 @@ async function handlerSearch(e) {
     }
 };
 
-async function serviceGetGallery(query) {
+async function serviceGetGallery(query, page = 1) {
     const params = new URLSearchParams({
                 key: API_KEY,
                 q: query,
                 image_type: 'photo',
                 orientation: 'horizontal',
                 safesearch: true,
+                page,
     });
     const response = await axios.get(`${BASE_URL}?${params}`)
         return response.data;
@@ -85,10 +98,27 @@ function createMarkup(arr) {
     .join("");
 };
 
-// async function markupCardList(evt) {
-//   evt.preventDefault();
-//   lightbox.next();
-// }
+async function handlerLoadMore(entries, observer) {
+    try {
+        const formData = new FormData(form);
+        const inputValue = formData.get("searchQuery");
 
-
+        await entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                page += 1;
+                serviceGetGallery(inputValue, page)
+                    .then((data) => {
+                        container.insertAdjacentHTML('beforeend', createMarkup(data.hits));
+                        if (data.total >= totalHits) {
+                            observer.unobserve(guard);
+                        }
+                })
+            }
+        });
+  } catch (error) {
+        Notiflix.Notify.failure(error.message);
+  } finally {
+        lightbox.refresh();
+  }
+}
     
