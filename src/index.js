@@ -9,33 +9,37 @@ axios.defaults.baseURL = 'https://pixabay.com/api';
 const form = document.querySelector(".search-form");
 const container = document.querySelector('.gallery');
 
+const lightbox = new SimpleLightbox('.gallery a');
+
 form.addEventListener("submit", handlerSearch);
+container.addEventListener('click', markupCardList);
 
 async function handlerSearch(e) {
     e.preventDefault();
+    container.innerHTML = '';
 
     const formData = new FormData(e.currentTarget);
     const inputValue = formData.get("searchQuery");
+    if (!inputValue) {
+    return Notify.failure('Enter something!');
+  }
     try {
         const gallery = await serviceGetGallery(inputValue);
-        const images = gallery.hits;
-
-        if (!images || !images.length) {
-            throw new Error('No images found.');
-        }
-
-        container.innerHTML = createMarkup(images);
-            const lightbox = new SimpleLightbox('.gallery a', {
-        /* Налаштування можна додати тут */
-            });
-        lightbox.refresh();
+        container.innerHTML = createMarkup(gallery.hits);
     } catch (err) {
         Notiflix.Notify.failure(
             'Sorry, there are no images matching your search query. Please try again.');
         console.log(err);
-    };
+    } finally {
+        form.reset();
+        lightbox.refresh();
+    }
 };
 
+async function markupCardList(evt) {
+  evt.preventDefault();
+  lightbox.next();
+}
 
 
 async function serviceGetGallery(query) {
@@ -46,7 +50,7 @@ async function serviceGetGallery(query) {
                 orientation: 'horizontal',
                 safesearch: true,
     };
-    return axios.get('https://pixabay.com/api', { params })
+    return axios.get('', { params })
         .then(response => response.data);
 };
 
@@ -54,25 +58,26 @@ function createMarkup(arr) {
     return arr
     .map(
         ({ webformatURL, largeImageURL, tags, likes, views, comments, downloads }) => `
-    <a class="gallery__link" href="${webformatURL}">
-        <div class="photo-card gallery__item">
-            <img src="${largeImageURL}" alt="${tags}" loading="lazy" />
-            <div class="info">
-                <p class="info-item">
-                    <b>${likes} Likes</b>
-                </p>
-                <p class="info-item">
-                    <b>${views} Views</b>
-                </p>
-                <p class="info-item">
-                    <b>${comments} Comments</b>
-                </p>
-                <p class="info-item">
-                    <b>${downloads} Downloads</b>
-                </p>
-            </div>
-         </div>
-    </a>
+        <div class="photo-card">
+            <a class="gallery__link" href="${largeImageURL}">
+                <img src="${webformatURL}" alt="${tags}" loading="lazy" />
+                <div class="info">
+                    <p class="info-item">
+                        <b>${likes} Likes</b>
+                    </p>
+                    <p class="info-item">
+                        <b>${views} Views</b>
+                    </p>
+                    <p class="info-item">
+                        <b>${comments} Comments</b>
+                    </p>
+                    <p class="info-item">
+                        <b>${downloads} Downloads</b>
+                    </p>
+                </div>
+            </a>
+        </div>
+    
   `
     )
     .join("");
