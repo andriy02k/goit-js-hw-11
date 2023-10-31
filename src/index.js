@@ -19,10 +19,12 @@ const options = {
 const observer = new IntersectionObserver(handlerLoadMore, options);
 
 let page = 1;
+let isLoading = false;
+let quantity = 0;
 
 form.addEventListener("submit", handlerSearch);
 
-const lightbox = new SimpleLightbox('.gallery a');
+const lightbox = new SimpleLightbox('.gallery a',{captionsData: 'alt', captionDelay: 250});
 
 async function handlerSearch(e) {
     e.preventDefault();
@@ -51,7 +53,7 @@ async function handlerSearch(e) {
             'Sorry, there are no images matching your search query. Please try again.');
         console.log(err);
     } finally {
-        form.reset();
+        // form.reset();
         lightbox.refresh();
     }
 };
@@ -64,6 +66,7 @@ async function serviceGetGallery(query, page = 1) {
                 orientation: 'horizontal',
                 safesearch: true,
                 page,
+                per_page: '40',
     });
     const response = await axios.get(`${BASE_URL}?${params}`)
         return response.data;
@@ -73,9 +76,9 @@ function createMarkup(arr) {
     return arr
     .map(
         ({ webformatURL, largeImageURL, tags, likes, views, comments, downloads }) => `
-        <div class="photo-card">
+        <div class="photo-card gallery__item">
             <a class="gallery__link" href="${largeImageURL}">
-                <img src="${webformatURL}" alt="${tags}" loading="lazy" />
+                <img class="gallery__image" src="${webformatURL}" alt="${tags}" loading="lazy" />
                 <div class="info">
                     <p class="info-item">
                         <b>${likes} Likes</b>
@@ -105,17 +108,21 @@ async function handlerLoadMore(entries, observer) {
 
         await entries.forEach(entry => {
             if (entry.isIntersecting) {
+                isLoading = true;
                 page += 1;
                 serviceGetGallery(inputValue, page)
                     .then((data) => {
+                        isLoading = false;
                         container.insertAdjacentHTML('beforeend', createMarkup(data.hits));
-                        if (data.total >= totalHits) {
+                        quantity += data.hits.length;
+                        if (data.total <= quantity) {
                             observer.unobserve(guard);
                         }
                 })
             }
         });
-  } catch (error) {
+    } catch (error) {
+        isLoading = false;
         Notiflix.Notify.failure(error.message);
   } finally {
         lightbox.refresh();
