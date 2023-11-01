@@ -3,44 +3,34 @@ import Notiflix from 'notiflix';
 import 'notiflix/dist/notiflix-3.2.6.min.css';
 import SimpleLightbox from "simplelightbox";
 import "simplelightbox/dist/simple-lightbox.min.css";
-
 const BASE_URL = 'https://pixabay.com/api/';
 const API_KEY = '40333980-523d7a346ab541add85c41861';
-
 const form = document.querySelector(".search-form");
 const container = document.querySelector('.gallery');
 const guard = document.querySelector('.js-guard');
-
 const options = {
   root: null,
   rootMargin: "300px",
 };
-
 const observer = new IntersectionObserver(handlerLoadMore, options);
-
 let page = 1;
-let currentPage = 1;
-let isLoading = false;
+let isLoading = true;
 let quantity = 0;
-
 form.addEventListener("submit", handlerSearch);
-
 const lightbox = new SimpleLightbox('.gallery a',{captionsData: 'alt', captionDelay: 250});
-
 async function handlerSearch(e) {
+    page = 1;
+    isLoading = true
     e.preventDefault();
     container.innerHTML = '';
-    currentPage = 1;
     quantity = 0;
-
     const formData = new FormData(e.currentTarget);
     const inputValue = formData.get("searchQuery");
     if (!inputValue) {
     return Notiflix.Notify.failure('Enter something!');
   }
     try {
-        const gallery = await serviceGetGallery(inputValue);
-
+        const gallery = await serviceGetGallery(inputValue, page);
         if (gallery.hits.length === 0) {
             Notiflix.Report.failure(
                 'Error 404',
@@ -59,7 +49,6 @@ async function handlerSearch(e) {
         lightbox.refresh();
     }
 };
-
 async function serviceGetGallery(query, page) {
     const params = new URLSearchParams({
                 key: API_KEY,
@@ -73,7 +62,6 @@ async function serviceGetGallery(query, page) {
     const response = await axios.get(`${BASE_URL}?${params}`)
         return response.data;
 };
-
 function createMarkup(arr) {
     return arr
     .map(
@@ -102,19 +90,21 @@ function createMarkup(arr) {
     )
     .join("");
 };
-
 async function handlerLoadMore(entries, observer) {
+    if(isLoading){
+        return isLoading = false
+    }
+   
     try {
         const formData = new FormData(form);
         const inputValue = formData.get("searchQuery");
-
         await entries.forEach(entry => {
             if (entry.isIntersecting) {
-                isLoading = true;
-                currentPage += 1;
-                serviceGetGallery(inputValue, currentPage)
+               
+   page +=1;
+                serviceGetGallery(inputValue, page)
                     .then((data) => {
-                        isLoading = false;
+                        // isLoading = false;
                         container.insertAdjacentHTML('beforeend', createMarkup(data.hits));
                         quantity += data.hits.length;
                         if (data.total <= quantity) {
@@ -124,10 +114,9 @@ async function handlerLoadMore(entries, observer) {
             }
         });
     } catch (error) {
-        isLoading = false;
+        isLoading = true;
         Notiflix.Notify.failure(error.message);
   } finally {
         lightbox.refresh();
   }
 }
-    
