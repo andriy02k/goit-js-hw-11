@@ -19,6 +19,7 @@ const options = {
 const observer = new IntersectionObserver(handlerLoadMore, options);
 
 let page = 1;
+let currentPage = 1;
 let isLoading = false;
 let quantity = 0;
 
@@ -29,6 +30,8 @@ const lightbox = new SimpleLightbox('.gallery a',{captionsData: 'alt', captionDe
 async function handlerSearch(e) {
     e.preventDefault();
     container.innerHTML = '';
+    currentPage = 1;
+    quantity = 0;
 
     const formData = new FormData(e.currentTarget);
     const inputValue = formData.get("searchQuery");
@@ -53,12 +56,11 @@ async function handlerSearch(e) {
             'Sorry, there are no images matching your search query. Please try again.');
         console.log(err);
     } finally {
-        // form.reset();
         lightbox.refresh();
     }
 };
 
-async function serviceGetGallery(query, page = 1) {
+async function serviceGetGallery(query, page) {
     const params = new URLSearchParams({
                 key: API_KEY,
                 q: query,
@@ -109,8 +111,8 @@ async function handlerLoadMore(entries, observer) {
         await entries.forEach(entry => {
             if (entry.isIntersecting) {
                 isLoading = true;
-                page += 1;
-                serviceGetGallery(inputValue, page)
+                currentPage += 1;
+                serviceGetGallery(inputValue, currentPage)
                     .then((data) => {
                         isLoading = false;
                         container.insertAdjacentHTML('beforeend', createMarkup(data.hits));
